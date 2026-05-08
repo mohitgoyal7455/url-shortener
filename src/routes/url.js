@@ -4,6 +4,7 @@ const Url = require('../models/Url');
 
 const router = express.Router();
 
+// POST /api/shorten
 router.post('/shorten', async (req, res) => {
   const { originalUrl } = req.body;
   if (!originalUrl) {
@@ -24,6 +25,26 @@ router.post('/shorten', async (req, res) => {
       shortUrl: process.env.BASE_URL + '/' + url.shortCode,
       shortCode: url.shortCode,
       originalUrl: url.originalUrl,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/stats/:code
+router.get('/stats/:code', async (req, res) => {
+  try {
+    const url = await Url.findOne({ shortCode: req.params.code });
+    if (!url) {
+      return res.status(404).json({ error: 'URL not found' });
+    }
+    return res.status(200).json({
+      originalUrl: url.originalUrl,
+      shortCode: url.shortCode,
+      shortUrl: process.env.BASE_URL + '/' + url.shortCode,
+      clicks: url.clicks,
+      createdAt: url.createdAt,
     });
   } catch (error) {
     console.error(error);
