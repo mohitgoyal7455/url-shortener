@@ -1,16 +1,29 @@
 const express = require('express');
 const { nanoid } = require('nanoid');
+const { body, validationResult } = require('express-validator');
 const Url = require('../models/Url');
 
 const router = express.Router();
 
+// Validation rules
+const validateUrl = [
+  body('originalUrl')
+    .notEmpty()
+    .withMessage('originalUrl is required')
+    .isURL()
+    .withMessage('Please provide a valid URL'),
+];
+
 // POST /api/shorten
-router.post('/shorten', async (req, res) => {
-  const { originalUrl } = req.body;
-  if (!originalUrl) {
-    return res.status(400).json({ error: 'originalUrl is required' });
+router.post('/shorten', validateUrl, async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
   }
+
   try {
+    const { originalUrl } = req.body;
+
     let url = await Url.findOne({ originalUrl });
     if (url) {
       return res.status(200).json({
@@ -19,21 +32,22 @@ router.post('/shorten', async (req, res) => {
         originalUrl: url.originalUrl,
       });
     }
+
     const shortCode = nanoid(7);
     url = await Url.create({ originalUrl, shortCode });
+
     return res.status(201).json({
       shortUrl: process.env.BASE_URL + '/' + url.shortCode,
       shortCode: url.shortCode,
       originalUrl: url.originalUrl,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    next(error);
   }
 });
 
 // GET /api/stats/:code
-router.get('/stats/:code', async (req, res) => {
+router.get('/stats/:code', async (req, res, next) => {
   try {
     const url = await Url.findOne({ shortCode: req.params.code });
     if (!url) {
@@ -47,8 +61,7 @@ router.get('/stats/:code', async (req, res) => {
       createdAt: url.createdAt,
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    next(error);
   }
 });
 
