@@ -14,11 +14,9 @@ const app = express();
 
 connectDB();
 
-// Security middleware
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 
-// Rate limiter - max 10 requests per minute per IP
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 10,
@@ -26,11 +24,10 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
-
 app.use(express.json());
+app.use(express.static('public'));
 app.use('/api', urlRoutes);
 
-// GET /:code - redirect
 app.get('/:code', async (req, res, next) => {
   try {
     const url = await Url.findOne({ shortCode: req.params.code });
@@ -49,7 +46,6 @@ app.get('/', (req, res) => {
   res.json({ message: 'URL Shortener API is running!' });
 });
 
-// Global error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;

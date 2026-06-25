@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>URL Shortener</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: #1e293b;
+      padding: 2.5rem;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #38bdf8;
+    }
+
+    p.subtitle {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus { border-color: #38bdf8; }
+
+    button {
+      width: 100%;
+      padding: 0.85rem;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #0ea5e9; }
+
+    .result {
+      margin-top: 1.5rem;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 1rem;
+      display: none;
+    }
+
+    .result p {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 0.4rem;
+    }
+
+    .result a {
+      color: #38bdf8;
+      font-size: 1rem;
+      word-break: break-all;
+      text-decoration: none;
+    }
+
+    .result a:hover { text-decoration: underline; }
+
+    .copy-btn {
+      margin-top: 0.75rem;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      width: auto;
+    }
+
+    .error {
+      margin-top: 1rem;
+      color: #f87171;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .stats {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔗 URL Shortener</h1>
+    <p class="subtitle">Paste a long URL and get a short one instantly</p>
+
+    <input type="url" id="urlInput" placeholder="https://example.com/very/long/url" />
+    <button onclick="shortenUrl()">Shorten URL</button>
+
+    <div class="error" id="error"></div>
+
+    <div class="result" id="result">
+      <p>Your short URL:</p>
+      <a id="shortLink" href="#" target="_blank"></a>
+      <br/>
+      <button class="copy-btn" onclick="copyUrl()">📋 Copy</button>
+      <div class="stats" id="stats"></div>
+    </div>
+  </div>
+
+  <script>
+    async function shortenUrl() {
+      const input = document.getElementById('urlInput').value.trim();
+      const errorEl = document.getElementById('error');
+      const resultEl = document.getElementById('result');
+      const shortLink = document.getElementById('shortLink');
+      const statsEl = document.getElementById('stats');
+
+      errorEl.style.display = 'none';
+      resultEl.style.display = 'none';
+
+      if (!input) {
+        errorEl.textContent = 'Please enter a URL';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/shorten', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ originalUrl: input }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          const msg = data.errors ? data.errors[0].msg : data.error;
+          errorEl.textContent = msg;
+          errorEl.style.display = 'block';
+          return;
+        }
+
+        shortLink.href = data.shortUrl;
+        shortLink.textContent = data.shortUrl;
+        statsEl.textContent = 'Short code: ' + data.shortCode;
+        resultEl.style.display = 'block';
+
+      } catch (err) {
+        errorEl.textContent = 'Something went wrong. Try again.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function copyUrl() {
+      const link = document.getElementById('shortLink').textContent;
+      navigator.clipboard.writeText(link);
+      alert('Copied to clipboard!');
+    }
+
+    document.getElementById('urlInput').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') shortenUrl();
+    });
+  </script>
+</body>
+</html>
