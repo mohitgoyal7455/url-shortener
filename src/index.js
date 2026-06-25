@@ -1,5 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const urlRoutes = require('./routes/url');
 const Url = require('./models/Url');
@@ -10,6 +13,19 @@ dotenv.config();
 const app = express();
 
 connectDB();
+
+// Security middleware
+app.use(helmet());
+app.use(cors());
+
+// Rate limiter - max 10 requests per minute per IP
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many requests, please try again after a minute' },
+});
+
+app.use('/api', limiter);
 
 app.use(express.json());
 app.use('/api', urlRoutes);
@@ -33,7 +49,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'URL Shortener API is running!' });
 });
 
-// Global error handler (must be last)
+// Global error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
