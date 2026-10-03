@@ -5,14 +5,24 @@ const Url = require('../models/Url');
 
 const router = express.Router();
 
+const baseUrl = (req) =>
+  (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+
 // Validation rules
 const validateUrl = [
   body('originalUrl')
+    .trim()
     .notEmpty()
     .withMessage('originalUrl is required')
-    .isURL()
-    .withMessage('Please provide a valid URL'),
+    .isURL({ protocols: ['http', 'https'], require_protocol: true })
+    .withMessage('Please provide a valid URL starting with http:// or https://'),
 ];
+
+const format = (req, url) => ({
+  shortUrl: baseUrl(req) + '/' + url.shortCode,
+  shortCode: url.shortCode,
+  originalUrl: url.originalUrl,
+});
 
 // POST /api/shorten
 router.post('/shorten', validateUrl, async (req, res, next) => {
@@ -26,21 +36,20 @@ router.post('/shorten', validateUrl, async (req, res, next) => {
 
     let url = await Url.findOne({ originalUrl });
     if (url) {
-      return res.status(200).json({
-        shortUrl: process.env.BASE_URL + '/' + url.shortCode,
-        shortCode: url.shortCode,
-        originalUrl: url.originalUrl,
-      });
+      return res.status(200).json(format(req, url));
     }
 
-    const shortCode = nanoid(7);
-    url = await Url.create({ originalUrl, shortCode });
+    // Retry on the (rare) short-code collision
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        url = await Url.create({ originalUrl, shortCode: nanoid(7) });
+        break;
+      } catch (e) {
+        if (e.code !== 11000 || attempt === 2) throw e;
+      }
+    }
 
-    return res.status(201).json({
-      shortUrl: process.env.BASE_URL + '/' + url.shortCode,
-      shortCode: url.shortCode,
-      originalUrl: url.originalUrl,
-    });
+    return res.status(201).json(format(req, url));
   } catch (error) {
     next(error);
   }
@@ -54,9 +63,7 @@ router.get('/stats/:code', async (req, res, next) => {
       return res.status(404).json({ error: 'URL not found' });
     }
     return res.status(200).json({
-      originalUrl: url.originalUrl,
-      shortCode: url.shortCode,
-      shortUrl: process.env.BASE_URL + '/' + url.shortCode,
+      ...format(req, url),
       clicks: url.clicks,
       createdAt: url.createdAt,
     });

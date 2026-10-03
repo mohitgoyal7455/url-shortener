@@ -20,7 +20,7 @@ A full-stack URL Shortener built with **Node.js**, **Express**, and **MongoDB**.
 ## Getting Started
 
 ### Prerequisites
-- Node.js v18+
+- Node.js v20.19+
 - MongoDB (local or Atlas)
 
 ### Installation
@@ -36,6 +36,7 @@ A full-stack URL Shortener built with **Node.js**, **Express**, and **MongoDB**.
    PORT=8000
    MONGO_URI=mongodb://localhost:27017/urlshortener
    BASE_URL=http://localhost:8000
+   (or copy .env.example to .env)
 
 4. Start the server
    npm run dev
@@ -71,6 +72,7 @@ GET /api/stats/JPNBfKK
    - MONGO_URI = your MongoDB Atlas connection string
    - BASE_URL = your Render app URL
    - PORT = 8000
+   - NODE_ENV = production
 7. Click Deploy!
 
 ## Project Structure
